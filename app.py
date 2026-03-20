@@ -15,35 +15,36 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ---------------- GLOBAL CSS FIX ----------------
+# ---------------- FINAL STABLE CSS ----------------
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* FORCE TEXT VISIBILITY */
-html, body, [class*="css"] {
-    color: #f1f5f9 !important;
-    font-family: 'Inter', sans-serif !important;
+/* Background */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(145deg, #0a0e1a, #0f172a);
 }
 
-/* Fix all text */
-h1, h2, h3, h4, h5, h6, p, span, label, div {
+/* Main text */
+[data-testid="stMarkdownContainer"], 
+[data-testid="stText"], 
+label {
     color: #f1f5f9 !important;
+    font-family: 'Inter', sans-serif;
 }
 
-/* Sidebar fix */
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background: rgba(255,255,255,0.05);
+}
+
 section[data-testid="stSidebar"] * {
-    color: #f1f5f9 !important;
+    color: #e2e8f0 !important;
 }
 
 /* Inputs */
 input, textarea {
     color: #ffffff !important;
-}
-
-/* Background */
-.main {
-    background: linear-gradient(145deg, #0a0e1a, #0f172a);
 }
 
 /* Header */
@@ -53,6 +54,7 @@ input, textarea {
     border-radius: 20px;
     text-align: center;
     margin-bottom: 20px;
+    color: white;
 }
 
 /* Cards */
@@ -67,11 +69,11 @@ input, textarea {
 .metric {
     font-size: 2.5rem;
     font-weight: 800;
-    color: #ffffff !important;
+    color: #ffffff;
 }
 
 .label {
-    color: #94a3b8 !important;
+    color: #94a3b8;
     font-size: 0.9rem;
 }
 
@@ -82,13 +84,20 @@ input, textarea {
     border-radius: 12px;
     text-align: center;
     font-weight: bold;
+    color: white;
 }
 
 /* Button */
 .stButton > button {
-    background: linear-gradient(135deg, #3b82f6, #1e40af) !important;
-    color: white !important;
-    border-radius: 12px !important;
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: white;
+    border-radius: 12px;
+}
+
+/* Expander */
+[data-testid="stExpander"] {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
 }
 </style>
 """, unsafe_allow_html=True)
