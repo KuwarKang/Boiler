@@ -9,7 +9,7 @@ READ_API = "1JBJZ0VWIC0JILIL"
 
 st.set_page_config(layout="wide")
 
-# ---------------- CUSTOM CSS (TAILWIND STYLE) ----------------
+# ---------------- CUSTOM CSS ----------------
 st.markdown("""
 <style>
 body {
@@ -53,11 +53,22 @@ body {
 # ---------------- TITLE ----------------
 st.markdown('<div class="title">🔥 Smart Boiler Expansion Dashboard</div>', unsafe_allow_html=True)
 
-# ---------------- INPUT ----------------
-col1, col2 = st.columns([2,1])
+# ---------------- INITIAL VALUES ----------------
+st.markdown('<div class="card">', unsafe_allow_html=True)
+st.markdown("### ⚙️ Initial Calibration Values")
+
+col1, col2, col3 = st.columns(3)
 
 with col1:
-    initial = st.number_input("Initial Value (mm)", value=10)
+    init_x = st.number_input("🔴 X Axis (mm)", value=10)
+
+with col2:
+    init_y = st.number_input("🟢 Y Axis (mm)", value=10)
+
+with col3:
+    init_z = st.number_input("🔵 Z Axis (mm)", value=10)
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- FETCH DATA ----------------
 url = f"https://api.thingspeak.com/channels/{CHANNEL_ID}/feeds.json?api_key={READ_API}&results=50"
@@ -76,25 +87,25 @@ for f in res['feeds']:
 
 df = pd.DataFrame(data, columns=['X','Y','Z','Alarm'])
 
-# ---------------- CALCULATIONS ----------------
-df['X_exp'] = df['X'] - initial
-df['Y_exp'] = df['Y'] - initial
-df['Z_exp'] = df['Z'] - initial
+# ---------------- SAFE CALCULATIONS ----------------
+df['X_exp'] = (df['X'] - init_x).clip(lower=0)
+df['Y_exp'] = (df['Y'] - init_y).clip(lower=0)
+df['Z_exp'] = (df['Z'] - init_z).clip(lower=0)
 
 # ---------------- KPI CARDS ----------------
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.markdown(f'<div class="card"><div class="metric">X: {df["X_exp"].iloc[-1]:.2f} mm</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="card"><div class="metric">🔴 X: {df["X_exp"].iloc[-1]:.2f} mm</div></div>', unsafe_allow_html=True)
 
 with col2:
-    st.markdown(f'<div class="card"><div class="metric">Y: {df["Y_exp"].iloc[-1]:.2f} mm</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="card"><div class="metric">🟢 Y: {df["Y_exp"].iloc[-1]:.2f} mm</div></div>', unsafe_allow_html=True)
 
 with col3:
-    st.markdown(f'<div class="card"><div class="metric">Z: {df["Z_exp"].iloc[-1]:.2f} mm</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="card"><div class="metric">🔵 Z: {df["Z_exp"].iloc[-1]:.2f} mm</div></div>', unsafe_allow_html=True)
 
 # ---------------- ALERT ----------------
-if ((abs(df['X_exp'])>10) | (abs(df['Y_exp'])>15) | (abs(df['Z_exp'])>8)).any():
+if ((df['X_exp']>10) | (df['Y_exp']>15) | (df['Z_exp']>8)).any():
     st.markdown('<div class="alert">🚨 LIMIT EXCEEDED</div>', unsafe_allow_html=True)
 
 # ---------------- GRAPH ----------------
@@ -108,7 +119,9 @@ fig.add_trace(go.Scatter(y=df['Z_exp'], name='Z', line=dict(color='#3b82f6')))
 fig.update_layout(
     template="plotly_dark",
     height=400,
-    margin=dict(l=10,r=10,t=10,b=10)
+    margin=dict(l=10,r=10,t=10,b=10),
+    xaxis_title="Time",
+    yaxis_title="Expansion (mm)"
 )
 
 st.plotly_chart(fig, use_container_width=True)
@@ -128,13 +141,17 @@ fig3d = go.Figure(data=[go.Scatter3d(
 fig3d.update_layout(
     template="plotly_dark",
     height=400,
-    margin=dict(l=0,r=0,t=0,b=0)
+    margin=dict(l=0,r=0,t=0,b=0),
+    scene=dict(
+        xaxis_title='X',
+        yaxis_title='Y',
+        zaxis_title='Z'
+    )
 )
 
 st.plotly_chart(fig3d, use_container_width=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- TABLE ----------------
+# ---------------- DATA TABLE ----------------
 with st.expander("📊 View Raw Data"):
     st.dataframe(df)
-
