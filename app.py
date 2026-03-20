@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import requests
 import plotly.graph_objects as go
-import numpy as np
 
 # ---------------- CONFIG ----------------
 CHANNEL_ID = 3304820
@@ -10,26 +9,67 @@ READ_API = "1JBJZ0VWIC0JILIL"
 
 st.set_page_config(layout="wide")
 
-st.title("🔥 Smart Boiler Expansion Dashboard")
+# ---------------- CUSTOM CSS (TAILWIND STYLE) ----------------
+st.markdown("""
+<style>
+body {
+    background: linear-gradient(135deg, #0f172a, #020617);
+}
 
-# ---------------- USER INPUT ----------------
-initial = st.number_input("Enter Initial Value (mm)", value=10)
+.block-container {
+    padding-top: 1rem;
+}
+
+.card {
+    background: rgba(30,41,59,0.6);
+    backdrop-filter: blur(12px);
+    padding: 15px;
+    border-radius: 16px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    margin-bottom: 15px;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.metric {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.alert {
+    padding: 10px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+    text-align: center;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- TITLE ----------------
+st.markdown('<div class="title">🔥 Smart Boiler Expansion Dashboard</div>', unsafe_allow_html=True)
+
+# ---------------- INPUT ----------------
+col1, col2 = st.columns([2,1])
+
+with col1:
+    initial = st.number_input("Initial Value (mm)", value=10)
 
 # ---------------- FETCH DATA ----------------
-url = f"https://api.thingspeak.com/channels/{CHANNEL_ID}/feeds.json?api_key={READ_API}&results=100"
+url = f"https://api.thingspeak.com/channels/{CHANNEL_ID}/feeds.json?api_key={READ_API}&results=50"
 res = requests.get(url).json()
 
-feeds = res['feeds']
-
 data = []
-
-for f in feeds:
+for f in res['feeds']:
     try:
         x = float(f['field1'])
         y = float(f['field2'])
         z = float(f['field3'])
         alarm = int(f['field4']) if f['field4'] else 0
-
         data.append([x,y,z,alarm])
     except:
         continue
@@ -41,31 +81,41 @@ df['X_exp'] = df['X'] - initial
 df['Y_exp'] = df['Y'] - initial
 df['Z_exp'] = df['Z'] - initial
 
-# ---------------- ALARM LOGIC ----------------
-df['Alert'] = ((abs(df['X_exp'])>10) | (abs(df['Y_exp'])>15) | (abs(df['Z_exp'])>8))
+# ---------------- KPI CARDS ----------------
+col1, col2, col3 = st.columns(3)
 
-# ---------------- DISPLAY TABLE ----------------
-st.subheader("📊 Data Table")
-st.dataframe(df)
+with col1:
+    st.markdown(f'<div class="card"><div class="metric">X: {df["X_exp"].iloc[-1]:.2f} mm</div></div>', unsafe_allow_html=True)
 
-# ---------------- LINE GRAPH ----------------
-st.subheader("📈 Expansion Trends")
+with col2:
+    st.markdown(f'<div class="card"><div class="metric">Y: {df["Y_exp"].iloc[-1]:.2f} mm</div></div>', unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f'<div class="card"><div class="metric">Z: {df["Z_exp"].iloc[-1]:.2f} mm</div></div>', unsafe_allow_html=True)
+
+# ---------------- ALERT ----------------
+if ((abs(df['X_exp'])>10) | (abs(df['Y_exp'])>15) | (abs(df['Z_exp'])>8)).any():
+    st.markdown('<div class="alert">🚨 LIMIT EXCEEDED</div>', unsafe_allow_html=True)
+
+# ---------------- GRAPH ----------------
+st.markdown('<div class="card">', unsafe_allow_html=True)
 
 fig = go.Figure()
-fig.add_trace(go.Scatter(y=df['X_exp'], name='X', line=dict(color='red')))
-fig.add_trace(go.Scatter(y=df['Y_exp'], name='Y', line=dict(color='green')))
-fig.add_trace(go.Scatter(y=df['Z_exp'], name='Z', line=dict(color='blue')))
+fig.add_trace(go.Scatter(y=df['X_exp'], name='X', line=dict(color='#ef4444')))
+fig.add_trace(go.Scatter(y=df['Y_exp'], name='Y', line=dict(color='#22c55e')))
+fig.add_trace(go.Scatter(y=df['Z_exp'], name='Z', line=dict(color='#3b82f6')))
 
 fig.update_layout(
     template="plotly_dark",
-    xaxis_title="Time",
-    yaxis_title="Expansion (mm)"
+    height=400,
+    margin=dict(l=10,r=10,t=10,b=10)
 )
 
 st.plotly_chart(fig, use_container_width=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- 3D GRAPH ----------------
-st.subheader("📊 3D Expansion Visualization")
+st.markdown('<div class="card">', unsafe_allow_html=True)
 
 fig3d = go.Figure(data=[go.Scatter3d(
     x=df['X_exp'],
@@ -77,29 +127,14 @@ fig3d = go.Figure(data=[go.Scatter3d(
 
 fig3d.update_layout(
     template="plotly_dark",
-    scene=dict(
-        xaxis_title='X',
-        yaxis_title='Y',
-        zaxis_title='Z'
-    )
+    height=400,
+    margin=dict(l=0,r=0,t=0,b=0)
 )
 
 st.plotly_chart(fig3d, use_container_width=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- ALERT ----------------
-if df['Alert'].any():
-    st.error("🚨 ALERT: Expansion Limit Exceeded!")
-else:
-    st.success("✅ System Normal")
+# ---------------- TABLE ----------------
+with st.expander("📊 View Raw Data"):
+    st.dataframe(df)
 
-# ---------------- AI PREDICTION ----------------
-st.subheader("🧠 Prediction")
-
-if len(df) > 2:
-    pred_x = df['X_exp'].iloc[-1] + (df['X_exp'].iloc[-1] - df['X_exp'].iloc[-2])
-    pred_y = df['Y_exp'].iloc[-1] + (df['Y_exp'].iloc[-1] - df['Y_exp'].iloc[-2])
-    pred_z = df['Z_exp'].iloc[-1] + (df['Z_exp'].iloc[-1] - df['Z_exp'].iloc[-2])
-
-    st.write(f"Next Predicted X: {pred_x:.2f}")
-    st.write(f"Next Predicted Y: {pred_y:.2f}")
-    st.write(f"Next Predicted Z: {pred_z:.2f}")
